@@ -46,7 +46,7 @@ Do not ask the user to provide the base URL or model name for this skill. They a
 python3 scripts/generate_image.py \
   --prompt '<PROMPT>' \
   --size 2560x1440 \
-  --quality hd
+  --quality standard
 ```
 
 5. Read the printed JSON summary from the script.

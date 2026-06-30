@@ -29,7 +29,7 @@ python3 scripts/configure_api_key.py --api-key '<YOUR_THINKAI_API_KEY>'
 python3 scripts/generate_image.py \
   --prompt '一只坐在霓虹雨夜里的橘猫，电影感，写实风格' \
   --size 2560x1440 \
-  --quality hd
+  --quality standard
 ```
 
 生成的图片，以及请求/响应快照都会写入 `generated/` 目录，该目录已被 git 忽略。

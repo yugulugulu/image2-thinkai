@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate an image through ThinkAI gpt-image-2-lite.")
     parser.add_argument("--prompt", required=True, help="Image prompt")
     parser.add_argument("--size", default="1920x1080", help="Size label or explicit size, e.g. 2k or 2560x1440")
-    parser.add_argument("--quality", default="hd", choices=["standard", "hd"], help="Generation quality")
+    parser.add_argument("--quality", default="standard", choices=["standard", "hd"], help="Generation quality")
     parser.add_argument("--n", type=int, default=1, help="Number of images to request")
     parser.add_argument("--output-dir", help="Directory for generated artifacts")
     return parser.parse_args()
