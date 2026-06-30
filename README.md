@@ -27,7 +27,7 @@ python3 scripts/configure_api_key.py --api-key '<YOUR_THINKAI_API_KEY>'
 
 ```bash
 python3 scripts/generate_image.py \
-  --prompt '美女' \
+  --prompt '一只坐在霓虹雨夜里的橘猫，电影感，写实风格' \
   --size 2560x1440 \
   --quality hd
 ```
