@@ -29,9 +29,9 @@ python3 scripts/configure_api_key.py --api-key '<USER_KEY>'
 - Base URL: `https://www.thinkai.tv/v1`
 - Model: `gpt-image-2-lite`
 - Supported size presets for this skill:
-  - `1k` -> `1024x1024`
-  - `2k` -> `2048x2048`
-  - `4k` -> `4096x4096`
+  - `1k` -> `1920x1080`
+  - `2k` -> `2560x1440`
+  - `4k` -> `3840x2160`
 
 Do not ask the user to provide the base URL or model name for this skill. They are fixed.
 
@@ -45,7 +45,7 @@ Do not ask the user to provide the base URL or model name for this skill. They a
 ```bash
 python3 scripts/generate_image.py \
   --prompt '<PROMPT>' \
-  --size 2048x2048 \
+  --size 2560x1440 \
   --quality hd
 ```
 

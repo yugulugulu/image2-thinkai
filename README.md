@@ -7,9 +7,9 @@
 - Base URL: `https://www.thinkai.tv/v1`
 - Model: `gpt-image-2-lite`
 - 支持的尺寸预设：
-- `1k` -> `1024x1024`
-- `2k` -> `2048x2048`
-- `4k` -> `4096x4096`
+- `1k` -> `1920x1080`
+- `2k` -> `2560x1440`
+- `4k` -> `3840x2160`
 
 这个 skill 会发送 `User-Agent: curl/8.7.1`，用于避免 Cloudflare 拦截 Python 默认的 `urllib` 请求头。
 
@@ -28,7 +28,7 @@ python3 scripts/configure_api_key.py --api-key '<YOUR_THINKAI_API_KEY>'
 ```bash
 python3 scripts/generate_image.py \
   --prompt '美女' \
-  --size 2048x2048 \
+  --size 2560x1440 \
   --quality hd
 ```
 
