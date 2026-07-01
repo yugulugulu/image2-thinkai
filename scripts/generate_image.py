@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import base64
 import http.client
 import json
 import sys
@@ -13,7 +12,7 @@ from typing import Optional
 
 
 SIZE_ALIASES = {
-    "1k": "1920x1080",
+    "1k": "1920x1088",
     "2k": "2560x1440",
     "4k": "3840x2160",
 }
@@ -63,7 +62,7 @@ def request_image(config: dict, prompt: str, size: str, quality: str, n: int) ->
         "n": n,
         "size": size,
         "quality": quality,
-        "response_format": "b64_json",
+        "response_format": "url",
     }
 
     req = urllib.request.Request(
@@ -97,7 +96,7 @@ def request_image(config: dict, prompt: str, size: str, quality: str, n: int) ->
         raise RuntimeError(f"Image request failed: {exc}") from exc
 
     data = json.loads(payload)
-    if "data" not in data or not data["data"] or "b64_json" not in data["data"][0]:
+    if "data" not in data or not data["data"] or "url" not in data["data"][0]:
         raise RuntimeError(f"Unexpected response payload: {json.dumps(data, ensure_ascii=False)}")
 
     return {
@@ -114,12 +113,33 @@ def get_png_dimensions(png_bytes: bytes) -> tuple[int, int]:
     return width, height
 
 
+def download_image(image_url: str) -> bytes:
+    req = urllib.request.Request(
+        image_url,
+        headers={
+            "Accept": "*/*",
+            "User-Agent": "curl/8.7.1",
+        },
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            return resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Image download failed with HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Image download failed: {exc}") from exc
+
+
 def write_artifacts(skill_dir: Path, request_body: dict, response_json: dict, output_dir: Optional[str]) -> dict:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     target_dir = Path(output_dir).expanduser().resolve() if output_dir else (skill_dir / "generated" / stamp)
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    image_bytes = base64.b64decode(response_json["data"][0]["b64_json"])
+    image_url = response_json["data"][0]["url"]
+    image_bytes = download_image(image_url)
     width, height = get_png_dimensions(image_bytes)
 
     image_path = target_dir / "image.png"
@@ -134,6 +154,7 @@ def write_artifacts(skill_dir: Path, request_body: dict, response_json: dict, ou
         "image_path": str(image_path),
         "request_path": str(request_path),
         "response_path": str(response_path),
+        "image_url": image_url,
         "actual_size": f"{width}x{height}",
     }
 
@@ -158,6 +179,7 @@ def main():
         "actual_size": artifacts["actual_size"],
         "quality": args.quality,
         "image_path": artifacts["image_path"],
+        "image_url": artifacts["image_url"],
         "request_path": artifacts["request_path"],
         "response_path": artifacts["response_path"],
     }

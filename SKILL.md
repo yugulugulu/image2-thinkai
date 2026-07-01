@@ -29,7 +29,7 @@ python3 scripts/configure_api_key.py --api-key '<USER_KEY>'
 - Base URL: `https://www.thinkai.tv/v1`
 - Model: `gpt-image-2-lite`
 - Supported size presets for this skill:
-  - `1k` -> `1920x1080`
+  - `1k` -> `1920x1088`
   - `2k` -> `2560x1440`
   - `4k` -> `3840x2160`
 
@@ -55,10 +55,11 @@ python3 scripts/generate_image.py \
 ## Output Conventions
 
 - Default quality: `hd`
-- Default response format: `b64_json`
+- Default response format: `url`
 - Default count: `1`
 - Save outputs under `generated/` inside this skill directory unless the current task needs another explicit output path.
 - Include the local file path in the response.
+- Include the returned image URL in the response summary when available.
 - Mention the requested size and the actual returned size if they differ.
 
 ## Scripts
@@ -69,9 +70,9 @@ Save or update the ThinkAI API key in the local skill config.
 
 ### `scripts/generate_image.py`
 
-Generate an image with the stored API key and fixed ThinkAI channel settings. The script writes:
+Generate an image with the stored API key and fixed ThinkAI channel settings. The script requests a signed image URL, downloads the image, and writes:
 
-- the decoded PNG image
+- the downloaded PNG image
 - the raw response JSON
 - a request JSON snapshot
 

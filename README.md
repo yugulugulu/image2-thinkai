@@ -7,11 +7,12 @@
 - Base URL: `https://www.thinkai.tv/v1`
 - Model: `gpt-image-2-lite`
 - 支持的尺寸预设：
-- `1k` -> `1920x1080`
+- `1k` -> `1920x1088`
 - `2k` -> `2560x1440`
 - `4k` -> `3840x2160`
 
 这个 skill 会发送 `User-Agent: curl/8.7.1`，用于避免 Cloudflare 拦截 Python 默认的 `urllib` 请求头。
+图片接口默认使用 `response_format: "url"`，再从返回的签名 URL 下载图片，避免大体积 `b64_json` 响应在代理链路中被截断。
 
 ## 配置
 
