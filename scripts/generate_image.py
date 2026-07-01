@@ -4,6 +4,7 @@ import argparse
 import http.client
 import json
 import sys
+import subprocess
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -40,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate an image through ThinkAI gpt-image-2-lite.")
     parser.add_argument("--prompt", required=True, help="Image prompt")
     parser.add_argument("--size", default="1920x1080", help="Size label or explicit size, e.g. 2k or 2560x1440")
-    parser.add_argument("--quality", default="standard", choices=["standard", "hd"], help="Generation quality")
+    parser.add_argument("--quality", default="hd", choices=["standard", "hd"], help="Generation quality")
     parser.add_argument("--n", type=int, default=1, help="Number of images to request")
     parser.add_argument("--output-dir", help="Directory for generated artifacts")
     return parser.parse_args()
@@ -130,7 +131,18 @@ def download_image(image_url: str) -> bytes:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Image download failed with HTTP {exc.code}: {detail}") from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError(f"Image download failed: {exc}") from exc
+        curl = subprocess.run(
+            ["curl", "-L", "--fail", "--silent", "--show-error", image_url],
+            capture_output=True,
+            check=False,
+            timeout=600,
+        )
+        if curl.returncode == 0 and curl.stdout:
+            return curl.stdout
+        stderr = curl.stderr.decode("utf-8", errors="replace").strip()
+        if stderr:
+            raise RuntimeError(f"Image download failed: {exc}; curl fallback failed: {stderr}") from exc
+        raise RuntimeError(f"Image download failed: {exc}; curl fallback failed with exit code {curl.returncode}") from exc
 
 
 def write_artifacts(skill_dir: Path, request_body: dict, response_json: dict, output_dir: Optional[str]) -> dict:
