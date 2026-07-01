@@ -1,11 +1,11 @@
 ---
 name: image2-thinkai
-description: Generate images through the ThinkAI `gpt-image-2-lite` channel with a fixed base URL and model. Use when a user wants to create 1k, 2k, or 4k images through ThinkAI, wants first-run API key setup for this channel, or wants repeated image generation with the same stored ThinkAI credentials.
+description: Generate or edit images through the ThinkAI `gpt-image-2-lite` channel with a fixed base URL and model. Use when a user wants to create 1k, 2k, or 4k images through ThinkAI, wants first-run API key setup for this channel, wants image-to-image editing, or wants repeated image generation with the same stored ThinkAI credentials.
 ---
 
 # Image2 ThinkAI
 
-Use this skill to generate images through the ThinkAI OpenAI-compatible image endpoint at `https://www.thinkai.tv/v1` with the fixed model `gpt-image-2-lite`.
+Use this skill to generate or edit images through the ThinkAI OpenAI-compatible image endpoint at `https://www.thinkai.tv/v1` with the fixed model `gpt-image-2-lite`.
 
 ## Required Behavior
 
@@ -52,6 +52,36 @@ python3 scripts/generate_image.py \
 5. Read the printed JSON summary from the script.
 6. Return the image path, actual output size, and request summary to the user.
 
+## Edit Workflow
+
+Use this when the user provides one or more reference images and wants the output to follow them.
+
+1. Emit the pricing reminder exactly once at the start of the task.
+2. Ensure the API key is configured.
+3. Translate the user's requested size label into a concrete `size` value. Use `auto` when the user does not specify a size.
+4. Run the edit script:
+
+```bash
+python3 scripts/edit_image.py \
+  --prompt '<PROMPT>' \
+  --image /absolute/path/to/source.png \
+  --size auto \
+  --quality hd
+```
+
+5. For multi-image fusion, repeat `--image` for each source image.
+6. For local inpainting, pass a PNG mask with the same dimensions as the first source image:
+
+```bash
+python3 scripts/edit_image.py \
+  --prompt '<PROMPT>' \
+  --image /absolute/path/to/source.png \
+  --mask /absolute/path/to/mask.png
+```
+
+7. Read the printed JSON summary from the script.
+8. Return the image path, actual output size, source image path(s), and request summary to the user.
+
 ## Output Conventions
 
 - Default quality: `hd`
@@ -61,6 +91,7 @@ python3 scripts/generate_image.py \
 - Include the local file path in the response.
 - Include the returned image URL in the response summary when available.
 - Mention the requested size and the actual returned size if they differ.
+- For image edits, include the source image path(s) and mask path when used.
 
 ## Scripts
 
@@ -73,6 +104,16 @@ Save or update the ThinkAI API key in the local skill config.
 Generate an image with the stored API key and fixed ThinkAI channel settings. The script requests a signed image URL, downloads the image, and writes:
 
 - the downloaded PNG image
+- the raw response JSON
+- a request JSON snapshot
+
+Use the JSON printed by the script as the canonical source for reporting file paths and output dimensions.
+
+### `scripts/edit_image.py`
+
+Edit one or more source images with the stored API key and fixed ThinkAI channel settings. The script sends a multipart request to `/images/edits`, downloads or decodes the returned image, and writes:
+
+- the edited PNG image
 - the raw response JSON
 - a request JSON snapshot
 
