@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import http.client
 import json
 import sys
 import urllib.error
@@ -79,7 +80,16 @@ def request_image(config: dict, prompt: str, size: str, quality: str, n: int) ->
 
     try:
         with urllib.request.urlopen(req, timeout=600) as resp:
-            payload = resp.read().decode("utf-8")
+            chunks = []
+            while True:
+                try:
+                    chunk = resp.read(1024 * 1024)
+                except http.client.IncompleteRead as exc:
+                    chunk = exc.partial
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            payload = b"".join(chunks).decode("utf-8")
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Image request failed with HTTP {exc.code}: {detail}") from exc
