@@ -1,4 +1,4 @@
 interface:
   display_name: "image2_thinkai"
   short_description: "Generate images through ThinkAI image2 channel"
-  default_prompt: "Use $image2-thinkai to generate an image with the ThinkAI gpt-image-2-lite channel."
+  default_prompt: "Use $image2-thinkai to generate an image with the ThinkAI gpt-image-2-4k channel."

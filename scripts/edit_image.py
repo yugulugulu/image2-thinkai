@@ -40,7 +40,7 @@ def load_config(skill_dir: Path) -> dict:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Edit image(s) through ThinkAI gpt-image-2-lite.")
+    parser = argparse.ArgumentParser(description="Edit image(s) through ThinkAI gpt-image-2-4k.")
     parser.add_argument("--prompt", required=True, help="Edit instruction")
     parser.add_argument(
         "--image",
@@ -88,7 +88,7 @@ def detect_content_type(path: Path) -> str:
 
 def request_edit(config: dict, prompt: str, image_paths: list[Path], mask_path: Optional[Path], size: str, quality: str, n: int) -> dict:
     base_url = str(config.get("base_url", "https://www.thinkai.tv/v1")).rstrip("/")
-    model = str(config.get("model", "gpt-image-2-lite"))
+    model = str(config.get("model", "gpt-image-2-4k"))
     api_key = str(config["api_key"]).strip()
 
     cmd = [

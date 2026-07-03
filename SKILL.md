@@ -1,11 +1,11 @@
 ---
 name: image2-thinkai
-description: Generate or edit images through the ThinkAI `gpt-image-2-lite` channel with a fixed base URL and model. Use when a user wants to create 1k, 2k, or 4k images through ThinkAI, wants first-run API key setup for this channel, wants image-to-image editing, or wants repeated image generation with the same stored ThinkAI credentials.
+description: Generate or edit images through the ThinkAI `gpt-image-2-4k` channel with a fixed base URL and model. Use when a user wants to create 1k, 2k, or 4k images through ThinkAI, wants first-run API key setup for this channel, wants image-to-image editing, or wants repeated image generation with the same stored ThinkAI credentials.
 ---
 
 # Image2 ThinkAI
 
-Use this skill to generate or edit images through the ThinkAI OpenAI-compatible image endpoint at `https://www.thinkai.tv/v1` with the fixed model `gpt-image-2-lite`.
+Use this skill to generate or edit images through the ThinkAI OpenAI-compatible image endpoint at `https://www.thinkai.tv/v1` with the fixed model `gpt-image-2-4k`.
 
 ## Required Behavior
 
@@ -27,7 +27,7 @@ python3 scripts/configure_api_key.py --api-key '<USER_KEY>'
 ## Fixed Channel Settings
 
 - Base URL: `https://www.thinkai.tv/v1`
-- Model: `gpt-image-2-lite`
+- Model: `gpt-image-2-4k`
 - Supported size presets for this skill:
   - `1k` -> `1920x1088`
   - `2k` -> `2560x1440`

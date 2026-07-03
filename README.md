@@ -5,7 +5,7 @@
 ## 通道信息
 
 - Base URL: `https://www.thinkai.tv/v1`
-- Model: `gpt-image-2-lite`
+- Model: `gpt-image-2-4k`
 - 支持的尺寸预设：
 - `1k` -> `1920x1088`
 - `2k` -> `2560x1440`

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
-import http.client
 import json
-import sys
 import subprocess
+import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+import requests
 
 
 SIZE_ALIASES = {
@@ -17,6 +19,11 @@ SIZE_ALIASES = {
     "2k": "2560x1440",
     "4k": "3840x2160",
 }
+
+CONNECT_TIMEOUT_SECONDS = 30
+READ_TIMEOUT_SECONDS = 900
+MAX_REQUEST_ATTEMPTS = 3
+RETRYABLE_HTTP_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504, 524}
 
 
 def load_config(skill_dir: Path) -> dict:
@@ -38,7 +45,7 @@ def load_config(skill_dir: Path) -> dict:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate an image through ThinkAI gpt-image-2-lite.")
+    parser = argparse.ArgumentParser(description="Generate an image through ThinkAI gpt-image-2-4k.")
     parser.add_argument("--prompt", required=True, help="Image prompt")
     parser.add_argument("--size", default="1920x1080", help="Size label or explicit size, e.g. 2k or 2560x1440")
     parser.add_argument("--quality", default="hd", choices=["standard", "hd"], help="Generation quality")
@@ -52,12 +59,64 @@ def resolve_size(raw_size: str) -> str:
     return SIZE_ALIASES.get(normalized, raw_size.strip())
 
 
-def request_image(config: dict, prompt: str, size: str, quality: str, n: int) -> dict:
+def build_request_context(config: dict) -> tuple[str, str, dict]:
     base_url = str(config.get("base_url", "https://www.thinkai.tv/v1")).rstrip("/")
-    model = str(config.get("model", "gpt-image-2-lite"))
+    model = str(config.get("model", "gpt-image-2-4k"))
     api_key = str(config["api_key"]).strip()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "*/*",
+        "User-Agent": "curl/8.7.1",
+    }
+    return base_url, model, headers
 
-    body = {
+
+def request_json(method: str, url: str, headers: dict, body: Optional[dict] = None) -> dict:
+    last_error: Optional[Exception] = None
+    payload = None
+
+    for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
+        try:
+            resp = requests.request(
+                method,
+                url,
+                json=body,
+                headers=headers,
+                timeout=(CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS),
+            )
+            resp.raise_for_status()
+            payload = resp.text
+            break
+        except requests.HTTPError as exc:
+            status_code = exc.response.status_code if exc.response is not None else None
+            detail = exc.response.text if exc.response is not None else str(exc)
+            if status_code in RETRYABLE_HTTP_STATUS_CODES and attempt < MAX_REQUEST_ATTEMPTS:
+                last_error = RuntimeError(f"Image request failed with HTTP {status_code}: {detail}")
+                time.sleep(attempt)
+                continue
+            raise RuntimeError(f"Image request failed with HTTP {status_code}: {detail}") from exc
+        except (
+            requests.ConnectionError,
+            requests.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as exc:
+            if attempt < MAX_REQUEST_ATTEMPTS:
+                last_error = exc
+                time.sleep(attempt)
+                continue
+            raise RuntimeError(f"Image request failed: {exc}") from exc
+    else:
+        raise RuntimeError(f"Image request failed: {last_error}")
+
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Image request returned non-JSON payload: {payload[:500]}") from exc
+
+
+def build_generation_body(model: str, prompt: str, size: str, quality: str, n: int) -> dict:
+    return {
         "model": model,
         "prompt": prompt,
         "n": n,
@@ -66,37 +125,12 @@ def request_image(config: dict, prompt: str, size: str, quality: str, n: int) ->
         "response_format": "url",
     }
 
-    req = urllib.request.Request(
-        f"{base_url}/images/generations",
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "Accept": "*/*",
-            "User-Agent": "curl/8.7.1",
-        },
-        method="POST",
-    )
 
-    try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            chunks = []
-            while True:
-                try:
-                    chunk = resp.read(1024 * 1024)
-                except http.client.IncompleteRead as exc:
-                    chunk = exc.partial
-                if not chunk:
-                    break
-                chunks.append(chunk)
-            payload = b"".join(chunks).decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Image request failed with HTTP {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Image request failed: {exc}") from exc
+def request_sync_image(config: dict, prompt: str, size: str, quality: str, n: int) -> dict:
+    base_url, model, headers = build_request_context(config)
+    body = build_generation_body(model, prompt, size, quality, n)
+    data = request_json("POST", f"{base_url}/images/generations", headers, body)
 
-    data = json.loads(payload)
     if "data" not in data or not data["data"] or "url" not in data["data"][0]:
         raise RuntimeError(f"Unexpected response payload: {json.dumps(data, ensure_ascii=False)}")
 
@@ -145,7 +179,12 @@ def download_image(image_url: str) -> bytes:
         raise RuntimeError(f"Image download failed: {exc}; curl fallback failed with exit code {curl.returncode}") from exc
 
 
-def write_artifacts(skill_dir: Path, request_body: dict, response_json: dict, output_dir: Optional[str]) -> dict:
+def write_artifacts(
+    skill_dir: Path,
+    request_body: dict,
+    response_json: dict,
+    output_dir: Optional[str],
+) -> dict:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     target_dir = Path(output_dir).expanduser().resolve() if output_dir else (skill_dir / "generated" / stamp)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -178,7 +217,7 @@ def main():
     try:
         config = load_config(skill_dir)
         size = resolve_size(args.size)
-        result = request_image(config, args.prompt, size, args.quality, args.n)
+        result = request_sync_image(config, args.prompt, size, args.quality, args.n)
         artifacts = write_artifacts(skill_dir, result["request_body"], result["response_json"], args.output_dir)
     except Exception as exc:
         print(str(exc), file=sys.stderr)
