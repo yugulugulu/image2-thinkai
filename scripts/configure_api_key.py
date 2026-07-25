@@ -15,7 +15,7 @@ def main():
 
     config = {
         "base_url": "https://www.thinkai.tv/v1",
-        "model": "gpt-image-2-4k",
+        "model": "gpt-image-2",
         "api_key": args.api_key.strip(),
     }
 
